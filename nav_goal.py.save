@@ -1,0 +1,53 @@
+#!/usr/bin/python
+
+import roslib 
+import rospy
+#import simple action client
+import actionlib
+#imports messages used by move_base_msgs 
+import move_base_msgs.msg
+from geometry_msgs.msg import PoseWithCovarianceStamped
+
+def amclpose(msg):
+	print str(msg.pose.pose)
+	global thor_state
+	thor_state = (msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.orientation.w) 
+
+def nav_goal_client():
+	client=actionlib.SimpleActionClient("move_base",move_base_msgs.msg.MoveBaseAction)
+	client.wait_for_server()
+	#creates goal to send to action server
+	goal=move_base_msgs.msg.MoveBaseGoal()
+	goal.target_pose.header.frame_id = "map"
+	print "current frame: ", goal.target_pose.header.frame_id
+	global x, y, z
+	x = float(input("x coordinate: "))
+	y = float(input("y coordinate: "))
+	w = float(input("orientation: "))
+	goal.target_pose.header.stamp = rospy.get_rostime()
+	goal.target_pose.pose.position.x = x
+	goal.target_pose.pose.position.y = y 
+	goal.target_pose.pose.orientation.w = w
+	#sends goal to action server 
+	client.send_goal(goal)
+	#waits for the server to finish performing action 
+	client.wait_for_result()
+	return client.get_result()
+
+def dist_offset(x_des, y_des, x_actual, y_actual):
+	x_offset=x_des-x_actual
+	y_offset=y_des-y_actual
+	print "x offset: ", str(x_offset), "y offset: ", str(y_offset)
+	return (x_offset, y_offset)
+
+if __name__ == '__main__':
+	try: 
+		rospy.init_node('nav_goal')
+		result=nav_goal_client()
+		print "updated position"
+		rospy.Subscriber('amcl_pose',PoseWithCovarianceStamped,amclpose)
+		dist_offset(x, y, x_actual, )
+
+	except rospy.ROSInterruptException:
+		print "program interrupted before completion"
+	
